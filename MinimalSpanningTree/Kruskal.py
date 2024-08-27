@@ -1,11 +1,42 @@
-import cv2
-import numpy as np
-from heapq import heappush, heappop
-import matplotlib.pyplot as plt
+class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.size = [1] * n
+        self.n = n
+
+    def find(self, v):
+        if self.parent[v] != v:
+            self.parent[v] = self.find(self.parent[v])
+        return self.parent[v]
+
+    def union_sets(self, s1, s2):
+        root1 = self.find(s1)
+        root2 = self.find(s2)
+
+        if root1 != root2:
+            if self.size[root1] < self.size[root2]:
+                root1, root2 = root2, root1
+            self.parent[root2] = root1
+            self.size[root1] += self.size[root2]
+
+    def same_component(self, s1, s2):
+        return self.find(s1) == self.find(s2)
+
+
+if __name__ == "__main__":
+    uf = UnionFind(5)
+    uf.union_sets(0, 1)
+    uf.union_sets(3, 4)
+    print(uf.same_component(0, 1))  
+    print(uf.same_component(1, 2))  
+    print(uf.same_component(3, 4))  
+    uf.union_sets(2, 0)
+    print(uf.same_component(2, 1))  
 
 class Vertex:
-    def __init__(self, key):
+    def __init__(self, key, brightness=None):
         self.id = key
+        self.brightness = brightness
         self.connectedTo = {}
     
     def addNeighbor(self, nbr, weight=0):
@@ -19,18 +50,29 @@ class Vertex:
     
     def getWeight(self, nbr):
         return self.connectedTo[nbr]
+    
+    def getBrightness(self):
+        return self.brightness
+    
+    def setBrightness(self, brightness):
+        self.brightness = brightness
 
 class Graph:
     def __init__(self):
         self.vertList = {}
+        self.numVertices = 0
     
-    def addVertex(self, key):
-        newVertex = Vertex(key)
+    def addVertex(self, key, brightness=None):
+        self.numVertices = self.numVertices + 1
+        newVertex = Vertex(key, brightness)
         self.vertList[key] = newVertex
         return newVertex
     
     def getVertex(self, key):
-        return self.vertList.get(key)
+        if key in self.vertList:
+            return self.vertList[key]
+        else:
+            return None
     
     def addEdge(self, fromVert, toVert, cost=0):
         if fromVert not in self.vertList:
@@ -43,98 +85,65 @@ class Graph:
     def getVertices(self):
         return self.vertList.keys()
     
+    def getEdges(self):
+        edges = []
+        for v in self.vertList.values():
+            for nbr in v.getConnections():
+                edges.append((v.getId(), nbr.getId(), v.getWeight(nbr)))
+        return edges
+    
     def __iter__(self):
         return iter(self.vertList.values())
 
-def primMST(graph):
-    startVertex = next(iter(graph.getVertices()))
-    minHeap = [(0, startVertex, None)]
-    inMST = set()
+import sys
+
+def kruskalMST(graph):
+    edges = graph.getEdges()
+    edges.sort(key=lambda x: x[2])
+    
+    uf = UnionFind(len(graph.getVertices()))
     mst = Graph()
-    maxEdge = (None, None, -1)
+    
+    for edge in edges:
+        fromVert, toVert, weight = edge
+        fromIdx = ord(fromVert) - ord('A')
+        toIdx = ord(toVert) - ord('A')
+        
+        if not uf.same_component(fromIdx, toIdx):
+            uf.union_sets(fromIdx, toIdx)
+            mst.addEdge(fromVert, toVert, weight)
+    
+    return mst
 
-    while minHeap:
-        weight, currentVert, prevVert = heappop(minHeap)
-        if currentVert in inMST:
-            continue
-        inMST.add(currentVert)
+def printGraph(g):
+    print("------GRAPH------")
+    for v in g.getVertices():
+        print(v, end=" -> ")
+        for n in g.getVertex(v).getConnections():
+            print(f"{n.getId()} {g.getVertex(v).getWeight(n)}", end="; ")
+        print()
+    print("-------------------")
 
-        if prevVert is not None:
-            mst.addEdge(prevVert, currentVert, weight)
-            if weight > maxEdge[2]:
-                maxEdge = (prevVert, currentVert, weight)
-
-        for neighbor in graph.getVertex(currentVert).getConnections():
-            if neighbor.getId() not in inMST:
-                heappush(minHeap, (graph.getVertex(currentVert).getWeight(neighbor), neighbor.getId(), currentVert))
-
-    mst.removeEdge(maxEdge[0], maxEdge[1])
-    return mst, maxEdge
-
-def removeEdge(self, fromVert, toVert):
-    if fromVert in self.vertList and toVert in self.vertList:
-        if toVert in self.vertList[fromVert].connectedTo:
-            del self.vertList[fromVert].connectedTo[toVert]
-        if fromVert in self.vertList[toVert].connectedTo:
-            del self.vertList[toVert].connectedTo[fromVert]
-
-Graph.removeEdge = removeEdge
-
-def traverseAndColor(graph, startVert, color, img, XX):
-    stack = [startVert]
-    visited = set()
-    while stack:
-        current = stack.pop()
-        if current in visited:
-            continue
-        visited.add(current)
-        y = current // XX
-        x = current % XX
-        img[y, x] = color
-        for neighbor in graph.getVertex(current).getConnections():
-            if (neighbor.getId() not in visited) and (img[neighbor.getId() // XX, neighbor.getId() % XX] == 0):
-                stack.append(neighbor.getId())
+def loadGraphFromList(graph_list):
+    graph = Graph()
+    for edge in graph_list:
+        fromVert, toVert, weight = edge
+        graph.addEdge(fromVert, toVert, weight)
+    return graph
 
 if __name__ == "__main__":
+    graf = [
+        ('A', 'B', 4), ('A', 'C', 1), ('A', 'D', 4),
+        ('B', 'E', 9), ('B', 'F', 9), ('B', 'G', 7), ('B', 'C', 5),
+        ('C', 'G', 9), ('C', 'D', 3),
+        ('D', 'G', 10), ('D', 'J', 18),
+        ('E', 'I', 6), ('E', 'H', 4), ('E', 'F', 2),
+        ('F', 'H', 2), ('F', 'G', 8),
+        ('G', 'H', 9), ('G', 'J', 8),
+        ('H', 'I', 3), ('H', 'J', 9),
+        ('I', 'J', 9)
+    ]
 
-    image_path = 'sample.png'
-    I = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    if I is None:
-        print(f"Nie można wczytać obrazu: {image_path}")
-        exit(1)
-    
-    YY, XX = I.shape
-    
-
-    plt.imshow(I, cmap='gray')
-    plt.title("Oryginalny obraz")
-    plt.show()
-    
-    graph = Graph()
-    
-    for y in range(YY):
-        for x in range(XX):
-            currentVert = XX * y + x
-            if x < XX - 1:
-                rightVert = XX * y + (x + 1)
-                graph.addEdge(currentVert, rightVert, abs(int(I[y, x]) - int(I[y, x + 1])))
-            if y < YY - 1:
-                downVert = XX * (y + 1) + x
-                graph.addEdge(currentVert, downVert, abs(int(I[y, x]) - int(I[y + 1, x])))
-            if x < XX - 1 and y < YY - 1:
-                downRightVert = XX * (y + 1) + (x + 1)
-                graph.addEdge(currentVert, downRightVert, abs(int(I[y, x]) - int(I[y + 1, x + 1])))
-            if x > 0 and y < YY - 1:
-                downLeftVert = XX * (y + 1) + (x - 1)
-                graph.addEdge(currentVert, downLeftVert, abs(int(I[y, x]) - int(I[y + 1, x - 1])))
-    
-    mst, maxEdge = primMST(graph)
-    
-    IS = np.zeros((YY, XX), dtype='uint8')
-    traverseAndColor(mst, maxEdge[0], 100, IS, XX)
-    traverseAndColor(mst, maxEdge[1], 200, IS, XX)
-    
-    plt.imshow(IS, cmap='gray')
-    plt.title("Wynik")
-    plt.show()
+    graph = loadGraphFromList(graf)
+    mst_kruskal = kruskalMST(graph)
+    printGraph(mst_kruskal)
