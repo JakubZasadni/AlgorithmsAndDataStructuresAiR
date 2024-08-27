@@ -1,115 +1,107 @@
-class TreeNode:
-    def __init__(self, key, data):
+class Element:
+    def __init__(self, key, value):
         self.key = key
-        self.data = data
-        self.left = None
-        self.right = None
+        self.value = value
+    
+    def __str__(self):
+        return f"{self.key}:{self.value}"
 
-class BinarySearchTree:
-    def __init__(self):
-        self.root = None
+class HashTable:
+    def __init__(self, size, c1=1, c2=0):
+        self.size = size
+        self.table = [None for _ in range(size)]
+        self.c1 = c1
+        self.c2 = c2
+    
+    def hash_function(self, key):
+        if isinstance(key, str):
+            key = sum(ord(char) for char in key)
+        return key % self.size
+    
+    def insert(self, key, value):
+        index = self.hash_function(key)
+        new_element = Element(key, value)
+        for i in range(self.size):
+            probe = (index + self.c1*i + self.c2*i*i) % self.size
+            if self.table[probe] is None or self.table[probe].key == key:
+                self.table[probe] = new_element
+                return
+        print("Brak miejsca")
 
     def search(self, key):
-        return self.__search_recursive(self.root, key)
+        index = self.hash_function(key)
+        for i in range(self.size):
+            probe = (index + self.c1*i + self.c2*i*i) % self.size
+            if self.table[probe] is None:
+                return None
+            if self.table[probe].key == key:
+                return self.table[probe].value
+        return None
 
-    def __search_recursive(self, node, key):
-        if node is None or node.key == key:
-            return node.data
-        elif key < node.key:
-            return self.__search_recursive(node.left, key)
-        else:
-            return self.__search_recursive(node.right, key)
+    def remove(self, key):
+        index = self.hash_function(key)
+        for i in range(self.size):
+            probe = (index + self.c1*i + self.c2*i*i) % self.size
+            if self.table[probe] is None:
+                print("Brak danej")
+                return
+            if self.table[probe].key == key:
+                self.table[probe] = None
+                return
 
-    def insert(self, key, data):
-        self.root = self.__insert_recursive(self.root, key, data)
+    def __str__(self):
+        return "{" + ", ".join([str(self.table[i]) for i in range(self.size) if self.table[i] is not None]) + "}"
 
-    def __insert_recursive(self, node, key, data):
-        if node is None:
-            return TreeNode(key, data)
-        if key < node.key:
-            node.left = self.__insert_recursive(node.left, key, data)
-        elif key > node.key:
-            node.right = self.__insert_recursive(node.right, key, data)
-        else: 
-            node.data = data
-        return node
+def test_hash_table_linear(size=13, c1=1, c2=0):
+    h = HashTable(size, c1, c2)
+    for i, letter in enumerate("ABCDEFGHIJKLM"):
+        key = i + 1 if i + 1 < 6 else (18 if i == 5 else (31 if i == 6 else i + 1))
+        h.insert(key, letter)
+    
+    print(h)
+    
+    print(h.search(5))
+    print(h.search(14))
+    
+    h.insert(5, 'Z')
+    print(h.search(5))
+    
+    h.remove(5)
+    print(h)
+    
+    print(h.search(31))
+    
+    h.insert('test', 'W')
+    print(h)
 
-    def delete(self, key):
-        self.root = self.__delete_recursive(self.root, key)
+def test_hash_table_quadratic(size=13, c1=0, c2=1):
+    h = HashTable(size, c1, c2)
+    for i, letter in enumerate("ABCDEFGHIJKLM"):
+        key = i + 1 if i + 1 < 6 else (18 if i == 5 else (31 if i == 6 else i + 1))
+        h.insert(key, letter)
+    print(h)
 
-    def __delete_recursive(self, node, key):
-        if node is None:
-            return node
+def test_multiples_of_13_linear(size=13, c1=1, c2=0):
+    h = HashTable(size, c1, c2)
+    for i, letter in enumerate("ABCDEFGHIJKLM"):
+        h.insert(13*(i+1), letter)
+    print(h)
 
-        if key < node.key:
-            node.left = self.__delete_recursive(node.left, key)
-        elif key > node.key:
-            node.right = self.__delete_recursive(node.right, key)
-        else:
-            if node.left is None:
-                return node.right
-            elif node.right is None:
-                return node.left
-            else:
-                successor = self.__find_min(node.right)
-                node.key = successor.key
-                node.data = successor.data
-                node.right = self.__delete_recursive(node.right, successor.key)
-        return node
+def test_multiples_of_13_quadratic(size=13, c1=0, c2=1):
+    h = HashTable(size, c1, c2)
+    for i, letter in enumerate("ABCDEFGHIJKLM"):
+        h.insert(13*(i+1), letter)
+    print(h)
 
-    def __find_min(self, node):
-        while node.left:
-            node = node.left
-        return node
+def main():
 
-    def print_tree(self):
-        print("==============")
-        self.__print_tree(self.root, 0)
-        print("==============")
-
-    def __print_tree(self, node, lvl):
-        if node:
-            self.__print_tree(node.right, lvl+5)
-            print(lvl*" ", node.key, node.data)
-            self.__print_tree(node.left, lvl+5)
-
-    def height(self):
-        return self.__height_recursive(self.root)
-
-    def __height_recursive(self, node):
-        if node is None:
-            return 0
-        else:
-            left_height = self.__height_recursive(node.left)
-            right_height = self.__height_recursive(node.right)
-            return max(left_height, right_height) + 1
+    test_hash_table_linear()
+    test_hash_table_quadratic()
+    test_multiples_of_13_linear()
+    test_multiples_of_13_quadratic()
 
 if __name__ == "__main__":
-    bst = BinarySearchTree()
+    main()
 
-    elements = {50:'A', 15:'B', 62:'C', 5:'D', 20:'E', 58:'F', 91:'G', 3:'H', 8:'I', 37:'J', 60:'K', 24:'L'}
-    for key, value in elements.items():
-        bst.insert(key, value)
 
-    bst.print_tree()
-
-    sorted_elements = sorted(elements.items(), key=lambda x: x[0])
-    print("Zawartość drzewa:")
-    for key, value in sorted_elements:
-        print(f"{key} {value},", end=" ")
-
-    print("\nWartość dla klucza 24:", bst.search(24))
-    bst.insert(20, "AA")
-    bst.insert(6, "M")
-    bst.delete(62)
-    bst.insert(59, "N")
-    bst.insert(100, "P")
-    bst.delete(8)
-    bst.delete(15)
-    bst.insert(55, "R")
-    bst.delete(50)
-    bst.delete(5)
-    bst.delete(24)
-    print("Wysokość drzewa:", bst.height())
-    print("Zawartość drzewa:")
-    bst.print_tree()
+    
