@@ -1,116 +1,165 @@
+import polska
 class Vertex:
+    def __init__(self, key):
+        self.key = key
+
+    def __eq__(self, other):
+        return self.key == other.key
+
+    def __hash__(self):
+        return hash(self.key)
+
+    def __str__(self):
+        return str(self.key)
+
+class GraphList:
+    def __init__(self):
+        self.adjacency_list = {}
+
+    def is_empty(self):
+        return len(self.adjacency_list) == 0
     
-    def __init__(self, key, brightness=None):
-        self.id = key
-        self.brightness = brightness
-        self.connectedTo = {}
-    
-    def addNeighbor(self, nbr, weight=0):
-        self.connectedTo[nbr] = weight
-    
-    def getConnections(self):
-        return self.connectedTo.keys()
-    
-    def getId(self):
-        return self.id
-    
-    def getWeight(self, nbr):
-        return self.connectedTo[nbr]
-    
-    def getBrightness(self):
-        return self.brightness
-    
-    def setBrightness(self, brightness):
-        self.brightness = brightness
+    def insert_vertex(self, vertex):
+        if vertex not in self.adjacency_list:
+            self.adjacency_list[vertex] = {}
+
+    def insert_edge(self, vertex1, vertex2, edge=1):
+        if vertex1 in self.adjacency_list and vertex2 in self.adjacency_list:
+            self.adjacency_list[vertex1][vertex2] = edge
+            self.adjacency_list[vertex2][vertex1] = edge
+
+    def delete_vertex(self, vertex):
+        if vertex in self.adjacency_list:
+            del self.adjacency_list[vertex]
+            for v, edges in self.adjacency_list.items():
+                if vertex in edges:
+                    del edges[vertex]
+
+    def delete_edge(self, vertex1, vertex2):
+        if vertex1 in self.adjacency_list and vertex2 in self.adjacency_list:
+            del self.adjacency_list[vertex1][vertex2]
+            del self.adjacency_list[vertex2][vertex1]
+
+    def neighbours(self, vertex):
+        if vertex in self.adjacency_list:
+            return list(self.adjacency_list[vertex].items())  
+
+    def vertices(self):
+        return list(self.adjacency_list.keys())  
+
+    def get_vertex(self, vertex):
+        if vertex in self.adjacency_list:
+            return vertex
 
 class Graph:
     def __init__(self):
-        self.vertList = {}
-        self.numVertices = 0
-    
-    def addVertex(self, key, brightness=None):
-        self.numVertices = self.numVertices + 1
-        newVertex = Vertex(key, brightness)
-        self.vertList[key] = newVertex
-        return newVertex
-    
-    def getVertex(self, key):
-        if key in self.vertList:
-            return self.vertList[key]
-        else:
-            return None
-    
-    def addEdge(self, fromVert, toVert, cost=0):
-        if fromVert not in self.vertList:
-            self.addVertex(fromVert)
-        if toVert not in self.vertList:
-            self.addVertex(toVert)
-        self.vertList[fromVert].addNeighbor(self.vertList[toVert], cost)
-        self.vertList[toVert].addNeighbor(self.vertList[fromVert], cost)
-    
-    def getVertices(self):
-        return self.vertList.keys()
-    
-    def __iter__(self):
-        return iter(self.vertList.values())
+        self.adjacency_matrix = []
+        self.vertex_list = []
 
-import sys
-
-def primMST(graph):
-    intree = {v: False for v in graph.getVertices()}
-    distance = {v: sys.maxsize for v in graph.getVertices()}
-    parent = {v: None for v in graph.getVertices()}
+    def is_empty(self):
+        return len(self.vertex_list) == 0
     
-    startVertex = next(iter(graph.getVertices()))
-    distance[startVertex] = 0
-    
-    while not all(intree.values()):
-        u = min((v for v in graph.getVertices() if not intree[v]), key=lambda v: distance[v])
-        intree[u] = True
-        
+    def insert_vertex(self, vertex):
+        if vertex not in self.vertex_list:
+            self.vertex_list.append(vertex)
+            size = len(self.adjacency_matrix)
+            for i in range(size):
+                self.adjacency_matrix[i].append(0)
+            self.adjacency_matrix.append([0] * (size + 1))
 
-        for v in graph.getVertex(u).getConnections():
-            if not intree[v.getId()] and graph.getVertex(u).getWeight(v) < distance[v.getId()]:
-                distance[v.getId()] = graph.getVertex(u).getWeight(v)
-                parent[v.getId()] = u
-    
+    def insert_edge(self, vertex1, vertex2):
+        if vertex1 in self.vertex_list and vertex2 in self.vertex_list:
+            index1 = self.vertex_list.index(vertex1)
+            index2 = self.vertex_list.index(vertex2)
+            self.adjacency_matrix[index1][index2] = 1
+            self.adjacency_matrix[index2][index1] = 1
 
-    mst = Graph()
-    for v in graph.getVertices():
-        if parent[v] is not None:
-            mst.addEdge(parent[v], v, distance[v])
-    
-    return mst
+    def delete_vertex(self, vertex):
+        if vertex in self.vertex_list:
+            index = self.vertex_list.index(vertex)
+            self.vertex_list.remove(vertex)
+            del self.adjacency_matrix[index]
+            for row in self.adjacency_matrix:
+                del row[index]
 
-def printGraph(g):
-    print("------GRAPH------")
-    for v in g.getVertices():
-        print(v, end=" -> ")
-        for n in g.getVertex(v).getConnections():
-            print(f"{n.getId()} {g.getVertex(v).getWeight(n)}", end="; ")
-        print()
-    print("-------------------")
+    def delete_edge(self, vertex1, vertex2):
+        if vertex1 in self.vertex_list and vertex2 in self.vertex_list:
+            index1 = self.vertex_list.index(vertex1)
+            index2 = self.vertex_list.index(vertex2)
+            self.adjacency_matrix[index1][index2] = 0
+            self.adjacency_matrix[index2][index1] = 0
 
-def loadGraphFromList(graph_list):
-    graph = Graph()
-    for edge in graph_list:
-        fromVert, toVert, weight = edge
-        graph.addEdge(fromVert, toVert, weight)
+    def neighbours(self, vertex_id):
+        if 0 <= vertex_id < len(self.vertex_list):
+            neighbours = []
+            for j in range(len(self.adjacency_matrix[vertex_id])):
+                if self.adjacency_matrix[vertex_id][j] != 0:
+                    neighbours.append((self.vertex_list[j], self.adjacency_matrix[vertex_id][j]))
+            return iter(neighbours)
+
+    def vertices(self):
+        return self.vertex_list
+
+    def get_vertex(self, vertex_id):
+        if 0 <= vertex_id < len(self.vertex_list):
+            return self.vertex_list[vertex_id]
+
+def build_graph_from_edges(graph_class, edges):
+    graph = graph_class()
+    for edge in edges:
+        vertex1 = Vertex(edge[0])
+        vertex2 = Vertex(edge[1])
+
+        graph.insert_vertex(vertex1)
+        graph.insert_vertex(vertex2)
+        graph.insert_edge(vertex1, vertex2)
+
     return graph
 
-if __name__ == "__main__":
-    graf = [
-        ('A', 'B', 4), ('A', 'C', 1), ('A', 'D', 4),
-        ('B', 'E', 9), ('B', 'F', 9), ('B', 'G', 7), ('B', 'C', 5),
-        ('C', 'G', 9), ('C', 'D', 3),
-        ('D', 'G', 10), ('D', 'J', 18),
-        ('E', 'I', 6), ('E', 'H', 4), ('E', 'F', 2),
-        ('F', 'H', 2), ('F', 'G', 8),
-        ('G', 'H', 9), ('G', 'J', 8),
-        ('H', 'I', 3), ('H', 'J', 9),
-        ('I', 'J', 9)
-    ]
+def remove_vertex_and_edge(graph, vertex_to_remove, edge_to_remove):
+    graph.delete_vertex(vertex_to_remove)
+    graph.delete_edge(*edge_to_remove)
 
-    graph = loadGraphFromList(graf)
-    mst = primMST(graph)
-    printGraph(mst)
+def color_graph(graph, method):
+    if method == "DFS":
+        traversal_order = graph.vertices() 
+    elif method == "BFS":
+        traversal_order = [graph.vertices()[0]] 
+
+    colors = {} 
+    max_color = 0  
+
+    for vertex in traversal_order:
+        neighbors_colors = {colors[neighbor]: True for neighbor, _ in graph.neighbours(vertex) if neighbor in colors}
+
+        color = 0
+        while color in neighbors_colors:
+            color += 1
+
+        colors[vertex] = color
+        max_color = max(max_color, color)
+
+    colored_map = [(str(vertex), colors[vertex]) for vertex in colors]
+
+    polska.draw_map(graph, colored_map)
+
+    return max_color + 1  
+
+
+def main():
+    adjacency_list_graph = build_graph_from_edges(GraphList, polska.graf)
+    adjacency_matrix_graph = build_graph_from_edges(Graph, polska.graf)
+
+    print("DFS:")
+    max_colors_dfs_list = color_graph(adjacency_list_graph, "DFS")
+    max_colors_dfs_matrix = color_graph(adjacency_matrix_graph, "DFS")
+    print(f"Max colors (DFS) - List: {max_colors_dfs_list}, Matrix: {max_colors_dfs_matrix}")
+
+    print("\nBFS:")
+    max_colors_bfs_list = color_graph(adjacency_list_graph, "BFS")
+    max_colors_bfs_matrix = color_graph(adjacency_matrix_graph, "BFS")
+    print(f"Max colors (BFS) - List: {max_colors_bfs_list}, Matrix: {max_colors_bfs_matrix}")
+
+
+if __name__ == "__main__":
+    main()
