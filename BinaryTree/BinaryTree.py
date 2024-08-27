@@ -1,116 +1,116 @@
-class PriorityQueue:
+class TreeNode:
+    def __init__(self, key, data):
+        self.key = key
+        self.data = data
+        self.left = None
+        self.right = None
+
+class BinarySearchTree:
     def __init__(self):
-        self.tab = []
-        self.heap_size = 0
+        self.root = None
 
-    def is_empty(self):
-        return self.heap_size == 0
+    def search(self, key):
+        return self.__search_recursive(self.root, key)
 
-    def peek(self):
-        if self.is_empty():
-            return None
-        return self.tab[0]
-
-    def dequeue(self):
-        if self.is_empty():
-            return None
-        max_priority = self.tab[0]
-        self.tab[0] = self.tab[self.heap_size - 1]
-        self.heap_size -= 1
-        self.max_heapify(0)
-        return max_priority
-
-    def enqueue(self, element):
-        if self.heap_size < len(self.tab):
-            self.tab[self.heap_size] = element
+    def __search_recursive(self, node, key):
+        if node is None or node.key == key:
+            return node.data
+        elif key < node.key:
+            return self.__search_recursive(node.left, key)
         else:
-            self.tab.append(element)
-        self.heap_size += 1
-        self.build_max_heap()
+            return self.__search_recursive(node.right, key)
 
-    def left(self, idx):
-        return 2 * idx + 1
+    def insert(self, key, data):
+        self.root = self.__insert_recursive(self.root, key, data)
 
-    def right(self, idx):
-        return 2 * idx + 2
+    def __insert_recursive(self, node, key, data):
+        if node is None:
+            return TreeNode(key, data)
+        if key < node.key:
+            node.left = self.__insert_recursive(node.left, key, data)
+        elif key > node.key:
+            node.right = self.__insert_recursive(node.right, key, data)
+        else: 
+            node.data = data
+        return node
 
-    def parent(self, idx):
-        return (idx - 1) // 2
+    def delete(self, key):
+        self.root = self.__delete_recursive(self.root, key)
 
-    def max_heapify(self, idx):
-        left_idx = self.left(idx)
-        right_idx = self.right(idx)
-        largest = idx
-        if left_idx < self.heap_size and self.tab[left_idx] > self.tab[idx]:
-            largest = left_idx
-        if right_idx < self.heap_size and self.tab[right_idx] > self.tab[largest]:
-            largest = right_idx
-        if largest != idx:
-            self.tab[idx], self.tab[largest] = self.tab[largest], self.tab[idx]
-            self.max_heapify(largest)
+    def __delete_recursive(self, node, key):
+        if node is None:
+            return node
 
-    def build_max_heap(self):
-        for i in range(self.heap_size // 2 - 1, -1, -1):
-            self.max_heapify(i)
+        if key < node.key:
+            node.left = self.__delete_recursive(node.left, key)
+        elif key > node.key:
+            node.right = self.__delete_recursive(node.right, key)
+        else:
+            if node.left is None:
+                return node.right
+            elif node.right is None:
+                return node.left
+            else:
+                successor = self.__find_min(node.right)
+                node.key = successor.key
+                node.data = successor.data
+                node.right = self.__delete_recursive(node.right, successor.key)
+        return node
 
-    def print_dict(self):
-        print('{', end=' ')
-        for i in range(self.heap_size):
-            print(f'{self.tab[i]}', end=', ')
-        print('}')
+    def __find_min(self, node):
+        while node.left:
+            node = node.left
+        return node
 
-    def print_tree(self, idx, lvl):
-        if idx < self.heap_size:
-            self.print_tree(self.right(idx), lvl + 1)
-            print(2 * lvl * '  ', self.tab[idx] if self.tab[idx] else None)
-            self.print_tree(self.left(idx), lvl + 1)
+    def print_tree(self):
+        print("==============")
+        self.__print_tree(self.root, 0)
+        print("==============")
 
+    def __print_tree(self, node, lvl):
+        if node:
+            self.__print_tree(node.right, lvl+5)
+            print(lvl*" ", node.key, node.data)
+            self.__print_tree(node.left, lvl+5)
 
-class PriorityElement:
-    def __init__(self, data, priority):
-        self.__data = data
-        self.__priority = priority
+    def height(self):
+        return self.__height_recursive(self.root)
 
-    def __repr__(self):
-        return f'{self.__priority} : {self.__data}'
-
-    def __lt__(self, other):
-        return self.__priority < other.__priority
-
-    def __gt__(self, other):
-        return self.__priority > other.__priority
-
+    def __height_recursive(self, node):
+        if node is None:
+            return 0
+        else:
+            left_height = self.__height_recursive(node.left)
+            right_height = self.__height_recursive(node.right)
+            return max(left_height, right_height) + 1
 
 if __name__ == "__main__":
-    kolejka = PriorityQueue()
+    bst = BinarySearchTree()
 
-    dane = "GRYMOTYLA"
-    priorytety = [7, 5, 1, 2, 5, 3, 4, 8, 9]
+    elements = {50:'A', 15:'B', 62:'C', 5:'D', 20:'E', 58:'F', 91:'G', 3:'H', 8:'I', 37:'J', 60:'K', 24:'L'}
+    for key, value in elements.items():
+        bst.insert(key, value)
 
-    for data, priority in zip(dane, priorytety):
-        element = PriorityElement(data, priority)
-        kolejka.enqueue(element)
+    bst.print_tree()
 
-    print()
-    kolejka.print_tree(0, 0)
-    print()
-    kolejka.print_dict()
+    sorted_elements = sorted(elements.items(), key=lambda x: x[0])
+    print("Zawartość drzewa:")
+    for key, value in sorted_elements:
+        print(f"{key} {value},", end=" ")
 
-    usuniety_element = kolejka.dequeue()
-    print(usuniety_element)
+    print("\nWartość dla klucza 24:", bst.search(24))
+    bst.insert(20, "AA")
+    bst.insert(6, "M")
+    bst.delete(62)
+    bst.insert(59, "N")
+    bst.insert(100, "P")
+    bst.delete(8)
+    bst.delete(15)
+    bst.insert(55, "R")
+    bst.delete(50)
+    bst.delete(5)
+    bst.delete(24)
+    print("Wysokość drzewa:", bst.height())
+    print("Zawartość drzewa:")
+    bst.print_tree()
 
-    kolejny_element = kolejka.peek()
-    print(kolejny_element)
-
-    print()
-    kolejka.print_dict()
-
-    print(usuniety_element)
-
-    print()
-    while not kolejka.is_empty():
-        usuniety_element = kolejka.dequeue()
-        print(usuniety_element)
-
-    print()
-    kolejka.print_dict()
