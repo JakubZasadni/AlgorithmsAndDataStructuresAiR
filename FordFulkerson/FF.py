@@ -1,150 +1,103 @@
-import numpy as np
-import copy
+class Edge:
+    def __init__(self, from_node, to_node, capacity, is_residual=False):
+        self.from_node = from_node
+        self.to_node = to_node
+        self.capacity = capacity
+        self.flow = 0
+        self.is_residual = is_residual
+        self.residual = capacity if not is_residual else 0
 
-def create_adjacency_matrix(edges, num_vertices):
-    matrix = np.zeros((num_vertices, num_vertices))
-    for edge in edges:
-        i, j, _ = edge
-        matrix[i][j] = 1
-        matrix[j][i] = 1
-    return matrix
+    def __repr__(self):
+        return f"{self.from_node}->{self.to_node} cap: {self.capacity} flow: {self.flow} res: {self.residual} res_type: {self.is_residual}"
 
-graph_G = [('A','B',1), ('B','F',1), ('B','C',1), ('C','D',1), ('C','E',1), ('D','E',1)]
-graph_P = [('A','B',1), ('B','C',1), ('A','C',1)]
+class Graph:
+    def __init__(self):
+        self.adj_list = {}
 
-vertex_map_G = {v: idx for idx, v in enumerate(sorted(set(v for edge in graph_G for v in edge[:2])))}
-vertex_map_P = {v: idx for idx, v in enumerate(sorted(set(v for edge in graph_P for v in edge[:2])))}
+    def add_edge(self, from_node, to_node, capacity):
+        if from_node not in self.adj_list:
+            self.adj_list[from_node] = []
+        if to_node not in self.adj_list:
+            self.adj_list[to_node] = []
+        
+        real_edge = Edge(from_node, to_node, capacity)
+        residual_edge = Edge(to_node, from_node, 0, is_residual=True)
+        
+        self.adj_list[from_node].append(real_edge)
+        self.adj_list[to_node].append(residual_edge)
 
-G = create_adjacency_matrix([(vertex_map_G[i], vertex_map_G[j], w) for i, j, w in graph_G], len(vertex_map_G))
-P = create_adjacency_matrix([(vertex_map_P[i], vertex_map_P[j], w) for i, j, w in graph_P], len(vertex_map_P))
+    def print_graph(self):
+        for node, edges in self.adj_list.items():
+            print(f"{node}:")
+            for edge in edges:
+                print(f"    {edge}")
 
-def ullmann(used_columns, current_row, M, G, P, num_recursive_calls):
-    num_recursive_calls[0] += 1
-    if current_row == M.shape[0]:
-        if np.array_equal(P, M @ G @ M.T):
-            return [copy.deepcopy(M)], num_recursive_calls
-        return [], num_recursive_calls
+def bfs(graph, source, sink):
+    queue = [source]
+    visited = {source}
+    parent = {source: None}
     
-    valid_isomorphisms = []
-    for col in range(M.shape[1]):
-        if not used_columns[col]:
-            M[current_row] = 0
-            M[current_row][col] = 1
-            used_columns[col] = True
-            isomorphisms, num_recursive_calls = ullmann(used_columns, current_row + 1, M, G, P, num_recursive_calls)
-            valid_isomorphisms.extend(isomorphisms)
-            used_columns[col] = False
+    while queue:
+        current = queue.pop(0)
+        
+        for edge in graph.adj_list[current]:
+            if edge.to_node not in visited and edge.residual > 0:
+                visited.add(edge.to_node)
+                parent[edge.to_node] = (current, edge)
+                if edge.to_node == sink:
+                    return parent
+                queue.append(edge.to_node)
+    return None
+
+def augment_flow(graph, path, source, sink):
+    min_capacity = float('Inf')
+    node = sink
     
-    return valid_isomorphisms, num_recursive_calls
-
-M = np.zeros((P.shape[0], G.shape[0]))
-
-isomorphisms, num_recursive_calls = ullmann([False] * G.shape[0], 0, M, G, P, [0])
-print(len(isomorphisms))
-print(num_recursive_calls[0])
-
-def create_initial_M0(G, P):
-    M0 = np.zeros((P.shape[0], G.shape[0]))
-    deg_G = np.sum(G, axis=1)
-    deg_P = np.sum(P, axis=1)
-    for i in range(P.shape[0]):
-        for j in range(G.shape[0]):
-            if deg_P[i] <= deg_G[j]:
-                M0[i][j] = 1
-    return M0
-
-M0 = create_initial_M0(G, P)
-
-def ullmann_v2(used_columns, current_row, M, M0, G, P, num_recursive_calls):
-    num_recursive_calls[0] += 1
-    if current_row == M.shape[0]:
-        if np.array_equal(P, M @ G @ M.T):
-            return [copy.deepcopy(M)], num_recursive_calls
-        return [], num_recursive_calls
+    while node != source:
+        parent, edge = path[node]
+        min_capacity = min(min_capacity, edge.residual)
+        node = parent
     
-    valid_isomorphisms = []
-    for col in range(M.shape[1]):
-        if not used_columns[col] and M0[current_row][col] == 1:
-            M[current_row] = 0
-            M[current_row][col] = 1
-            used_columns[col] = True
-            isomorphisms, num_recursive_calls = ullmann_v2(used_columns, current_row + 1, M, M0, G, P, num_recursive_calls)
-            valid_isomorphisms.extend(isomorphisms)
-            used_columns[col] = False
+    node = sink
+    while node != source:
+        parent, edge = path[node]
+        edge.residual -= min_capacity
+        edge.flow += min_capacity
+        
+        for rev_edge in graph.adj_list[edge.to_node]:
+            if rev_edge.to_node == edge.from_node and rev_edge.is_residual:
+                rev_edge.residual += min_capacity
+        
+        node = parent
     
-    return valid_isomorphisms, num_recursive_calls
+    return min_capacity
 
-M = M0.copy()
-
-isomorphisms_v2, num_recursive_calls_v2 = ullmann_v2([False] * G.shape[0], 0, M, M0, G, P, [0])
-print(len(isomorphisms_v2))
-print(num_recursive_calls_v2[0])
-
-def prune(P, G, M):
-    change = True
-    while change:
-        change = False
-        for i in range(M.shape[0]):
-            for j in range(M.shape[1]):
-                if M[i][j] == 1:
-                    neighbors_P = np.where(P[i] == 1)[0]
-                    neighbors_G = np.where(G[j] == 1)[0]
-                    for neighbor_P in neighbors_P:
-                        found = False
-                        for neighbor_G in neighbors_G:
-                            if M[neighbor_P][neighbor_G] == 1:
-                                found = True
-                                break
-                        if not found:
-                            M[i][j] = 0
-                            change = True
-                            break
-    return M
-
-
-
-
-
-def ullmann_v3(P, G, current_row=0, M=None, using=None, result=0, iterations=0):
-    iterations += 1
-    if M is None:
-        M = np.zeros((P.shape[0], G.shape[0]))
-    if using is None:
-        using = [False] * M.shape[1]
+def edmonds_karp(graph, source, sink):
+    max_flow = 0
+    path = bfs(graph, source, sink)
     
-    if current_row == M.shape[0]:
-        if np.array_equal(P, M @ G @ M.T):
-            result += 1
-        return result, iterations
+    while path:
+        flow = augment_flow(graph, path, source, sink)
+        max_flow += flow
+        path = bfs(graph, source, sink)
     
-    M_copy = copy.deepcopy(M)
-    prune(P, G, M_copy)
-    for i in range(M.shape[1]):
-        if not using[i] and M[current_row][i] != 0:
-            using[i] = True
-            M_copy[current_row] = 0
-            M_copy[current_row][i] = 1
-            result, iterations = ullmann_v3(P, G, current_row + 1, M_copy, using, result, iterations)
-            using[i] = False
-    return result, iterations
+    return max_flow
 
-graph_G = [('A','B',1), ('B','F',1), ('B','C',1), ('C','D',1), ('C','E',1), ('D','E',1)]
-graph_P = [('A','B',1), ('B','C',1), ('A','C',1)]
+def main():
+    graphs = [
+        ('graph_0', [('s','u',2), ('u','t',1), ('u','v',3), ('s','v',1), ('v','t',2)]),
+        ('graph_1', [('s', 'a', 16), ('s', 'c', 13), ('c', 'a', 4), ('a', 'b', 12), ('b', 'c', 9), ('b', 't', 20), ('c', 'd', 14), ('d', 'b', 7), ('d', 't', 4)]),
+        ('graph_2', [('s', 'a', 3), ('s', 'c', 3), ('a', 'b', 4), ('b', 's', 3), ('b', 'c', 1), ('b', 'd', 2), ('c', 'e', 6), ('c', 'd', 2), ('d', 't', 1), ('e', 't', 9)])
+    ]
 
-vertex_map_G = {v: idx for idx, v in enumerate(sorted(set(v for edge in graph_G for v in edge[:2])))}
-vertex_map_P = {v: idx for idx, v in enumerate(sorted(set(v for edge in graph_P for v in edge[:2])))}
+    for name, edges in graphs:
+        graph = Graph()
+        for from_node, to_node, capacity in edges:
+            graph.add_edge(from_node, to_node, capacity)
+        
+        max_flow = edmonds_karp(graph, 's', 't')
+        print(f"{name} - found max flow: {max_flow}")
+        graph.print_graph()
 
-G = create_adjacency_matrix([(vertex_map_G[i], vertex_map_G[j], w) for i, j, w in graph_G], len(vertex_map_G))
-P = create_adjacency_matrix([(vertex_map_P[i], vertex_map_P[j], w) for i, j, w in graph_P], len(vertex_map_P))
-
-M0 = np.zeros((P.shape[0], G.shape[0]))
-deg_G = np.sum(G, axis=1)
-deg_P = np.sum(P, axis=1)
-for i in range(M0.shape[0]):
-    for j in range(M0.shape[1]):
-        if deg_P[i] <= deg_G[j]:
-            M0[i][j] = 1
-
-result, iterations = ullmann_v3(P, G, M=M0)
-print(result)
-print(iterations)
+if __name__ == "__main__":
+    main()
