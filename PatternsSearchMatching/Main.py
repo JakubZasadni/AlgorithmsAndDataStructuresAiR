@@ -1,172 +1,84 @@
-def string_compare_recursive(P, T, i, j):
-    if i == 0:
-        return j
-    if j == 0:
-        return i
-    
-    cost_substitute = string_compare_recursive(P, T, i-1, j-1) + (P[i] != T[j])
-    cost_insert = string_compare_recursive(P, T, i, j-1) + 1
-    cost_delete = string_compare_recursive(P, T, i-1, j) + 1
-    
-    return min(cost_substitute, cost_insert, cost_delete)
+import time
 
-P = ' kot'
-T = ' pies'
+def naive_search(S, W):
+    n = len(S)
+    m = len(W)
+    occurrences = 0
+    comparisons = 0
+    i = 0
 
-cost = string_compare_recursive(P, T, len(P) - 1, len(T) - 1)
-print(cost)
+    while i <= n - m:
+        match = True
+        for j in range(m):
+            comparisons += 1
+            if S[i + j] != W[j]:
+                match = False
+                break
+        if match:
+            occurrences += 1
+        i += 1
 
-import numpy as np
+    return occurrences, comparisons
 
-def string_compare_pd(P, T):
-    len_p = len(P)
-    len_t = len(T)
-    
-    D = np.zeros((len_p, len_t), dtype=int)
-    for i in range(len_p):
-        D[i][0] = i
-    for j in range(len_t):
-        D[0][j] = j
-    
-    for i in range(1, len_p):
-        for j in range(1, len_t):
-            cost_substitute = D[i-1][j-1] + (P[i] != T[j])
-            cost_insert = D[i][j-1] + 1
-            cost_delete = D[i-1][j] + 1
-            D[i][j] = min(cost_substitute, cost_insert, cost_delete)
-    
-    return D[len_p - 1][len_t - 1]
 
-P = ' biały autobus'
-T = ' czarny autokar'
+with open("lotr.txt", encoding='utf-8') as f:
+    text = f.readlines()
 
-cost = string_compare_pd(P, T)
-print(cost)
+S = ' '.join(text).lower()
+W = "time."
 
-def string_compare_pd_with_path(P, T):
-    len_p = len(P)
-    len_t = len(T)
+
+t_start = time.perf_counter()
+occurrences, comparisons = naive_search(S, W)
+t_stop = time.perf_counter()
+
+print(occurrences)
+print(comparisons)
+print( "{:.7f}".format(t_stop - t_start))
+
+def hash(word, d, q, N):
+    hw = 0
+    for i in range(N):
+        hw = (hw * d + ord(word[i])) % q
+    return hw
+
+def rabin_karp(S, W, d=256, q=101):
+    n = len(S)
+    m = len(W)
+    hW = hash(W, d, q, m)
+    occurrences = 0
+    comparisons = 0
+    collisions = 0
     
-    D = np.zeros((len_p, len_t), dtype=int)
-    parents = np.full((len_p, len_t), 'X', dtype=str)
-    
-    for i in range(len_p):
-        D[i][0] = i
-        parents[i][0] = 'D'
-    for j in range(len_t):
-        D[0][j] = j
-        parents[0][j] = 'I'
-    
-    for i in range(1, len_p):
-        for j in range(1, len_t):
-            cost_substitute = D[i-1][j-1] + (P[i] != T[j])
-            cost_insert = D[i][j-1] + 1
-            cost_delete = D[i-1][j] + 1
-            min_cost = min(cost_substitute, cost_insert, cost_delete)
-            D[i][j] = min_cost
-            
-            if min_cost == cost_substitute:
-                parents[i][j] = 'S' if P[i] != T[j] else 'M'
-            elif min_cost == cost_insert:
-                parents[i][j] = 'I'
+
+    h = 1
+    for i in range(m - 1):
+        h = (h * d) % q
+
+    hS = hash(S[:m], d, q, m)
+    for i in range(n - m + 1):
+        comparisons += 1
+        if hS == hW:
+            if S[i:i + m] == W:
+                occurrences += 1
             else:
-                parents[i][j] = 'D'
-    
-    i, j = len_p - 1, len_t - 1
-    path = []
-    
-    while not (i == 0 and j == 0):
-        operation = parents[i][j]
-        path.append(operation)
-        if operation == 'M' or operation == 'S':
-            i -= 1
-            j -= 1
-        elif operation == 'I':
-            j -= 1
-        elif operation == 'D':
-            i -= 1
-    
-    path.reverse()
-    return ''.join(path)
+                collisions += 1
+        
+        if i < n - m:
+            hS = (d * (hS - ord(S[i]) * h) + ord(S[i + m])) % q
+            if hS < 0:
+                hS += q
 
-P = ' thou shalt not'
-T = ' you should not'
+    return occurrences, comparisons, collisions
 
-path = string_compare_pd_with_path(P, T)
-print(path)
 
-def string_compare_substring(P, T):
-    len_p = len(P)
-    len_t = len(T)
-    
-    D = np.zeros((len_p, len_t), dtype=int)
-    for j in range(len_t):
-        D[0][j] = 0
-    
-    for i in range(1, len_p):
-        for j in range(1, len_t):
-            cost_substitute = D[i-1][j-1] + (P[i] != T[j])
-            cost_insert = D[i][j-1] + 1
-            cost_delete = D[i-1][j] + 1
-            D[i][j] = min(cost_substitute, cost_insert, cost_delete)
-    
-    min_cost = min(D[len_p-1])
-    end_index = np.argmin(D[len_p-1])
-    
-    return min_cost, end_index
+t_start = time.perf_counter()
+occurrences, comparisons, collisions = rabin_karp(S, W)
+t_stop = time.perf_counter()
 
-P = ' ban'
-T = ' mokeyssbanana'
-
-cost, index = string_compare_substring(P, T)
-print(index)
-
-def longest_common_subsequence(P, T):
-    len_p = len(P)
-    len_t = len(T)
-    
-    D = np.zeros((len_p, len_t), dtype=int)
-    for i in range(len_p):
-        D[i][0] = i
-    for j in range(len_t):
-        D[0][j] = j
-    
-    for i in range(1, len_p):
-        for j in range(1, len_t):
-            cost_substitute = D[i-1][j-1] + (P[i] != T[j])
-            if P[i] != T[j]:
-                cost_substitute += len(P) + len(T)
-            cost_insert = D[i][j-1] + 1
-            cost_delete = D[i-1][j] + 1
-            D[i][j] = min(cost_substitute, cost_insert, cost_delete)
-    
-    i, j = len_p - 1, len_t - 1
-    lcs = []
-    
-    while i > 0 and j > 0:
-        if P[i] == T[j]:
-            lcs.append(P[i])
-            i -= 1
-            j -= 1
-        elif D[i-1][j] < D[i][j-1]:
-            i -= 1
-        else:
-            j -= 1
-    
-    lcs.reverse()
-    return ''.join(lcs)
-
-P = ' democrat'
-T = ' republican'
-
-lcs = longest_common_subsequence(P, T)
-print(lcs)
-
-def longest_monotonic_subsequence(T):
-    P = ' ' + ''.join(sorted(T.strip()))
-    return longest_common_subsequence(P, T)
-
-T = ' 243517698'
-lms = longest_monotonic_subsequence(T)
-print(lms)
+print('\n')
+print(occurrences)
+print(comparisons)
+print(collisions)
+print( "{:.7f}".format(t_stop - t_start))
 
