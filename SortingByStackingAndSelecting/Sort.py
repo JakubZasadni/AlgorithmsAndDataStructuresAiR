@@ -1,94 +1,156 @@
-import turtle
+class PriorityQueue:
+    def __init__(self, elements=None):
+        self.tab = []
+        self.heap_size = 0
+        if elements:
+            self.tab = elements
+            self.heap_size = len(elements)
+            self.build_max_heap()
 
-polska=[(80,100, 'Z'), (180, 50, 'G'), (330, 80, 'N'), (420, 130, 'B'), 
-        (60, 200, 'F'),(140, 200, 'P'), (200, 140, 'C'), (260, 260, 'E'),
-        (340, 200, 'W'), (430, 290, 'L'), (110, 300, 'D'), (180, 330, 'O'),
-        (240, 350, 'S'), (320, 320, 'T'), (300, 400, 'K'), (400, 380, 'R')]
-        
-        
-slownik = { rej: (x, y, rej) for x, y, rej in polska}  
+    def is_empty(self):
+        return self.heap_size == 0
 
-graf =[('Z','G'), ('Z', 'P'), ('Z', 'F'),
-       ('G','Z'), ('G', 'P'), ('G', 'C'), ('G', 'N'),
-       ('N','G'), ('N', 'C'), ('N', 'W'), ('N', 'B'),
-       ('B','N'), ('B', 'W'), ('B', 'L'), 
-       ('F','Z'), ('F', 'P'), ('F', 'D'), 
-       ('P','F'), ('P', 'Z'), ('P', 'G'), ('P', 'C'), ('P','E'), ('P', 'O'), ('P', 'D'),        
-       ('C','P'), ('C', 'G'), ('C', 'N'), ('C', 'W'), ('C','E'),        
-       ('E','P'), ('E', 'C'), ('E', 'W'), ('E', 'T'), ('E','S'), ('E', 'O'),        
-       ('W','C'), ('W', 'N'), ('W', 'B'), ('W', 'L'), ('W','T'), ('W', 'E'),        
-       ('L','W'), ('L', 'B'), ('L', 'R'), ('L', 'T'),
-       ('D','F'), ('D', 'P'), ('D', 'O'), 
-       ('O','D'), ('O', 'P'), ('O', 'E'), ('O', 'S'),
-       ('S','O'), ('S', 'E'), ('S', 'T'), ('S', 'K'),
-       ('T','S'), ('T', 'E'), ('T', 'W'), ('T', 'L'), ('T','R'), ('T', 'K'),        
-       ('K','S'), ('K', 'T'), ('K', 'R'), 
-       ('R','K'), ('R', 'T'), ('R', 'L')]
+    def peek(self):
+        if self.is_empty():
+            return None
+        return self.tab[0]
 
-def coords(x,y):
-    y = 470 - y
-    dx = -250
-    dy = -235
-    return x+dx, y+dy
-    
+    def dequeue(self):
+        if self.is_empty():
+            return None
+        max_priority = self.tab[0]
+        self.tab[0] = self.tab[self.heap_size - 1]
+        self.heap_size -= 1
+        self.max_heapify(0)
+        return max_priority
 
-def draw_circle(x,y,letter):
-    x, y = coords(x, y)
-    turtle.penup
-    turtle.goto(x,y-20)
-    turtle.pendown()
-    turtle.circle(20)
-    turtle.write(letter,font=("Verdana", 18, "bold"))
-    turtle.penup()
+    def enqueue(self, element):
+        if self.heap_size < len(self.tab):
+            self.tab[self.heap_size] = element
+        else:
+            self.tab.append(element)
+        self.heap_size += 1
+        self.build_max_heap()
 
-def draw_line(edge):   
-    x,y,_ = slownik[edge[0]]
-    x, y = coords(x, y)
-    turtle.penup
-    turtle.goto(x, y)
-    turtle.pendown()
-    x,y,_ = slownik[edge[1]]
-    x, y = coords(x, y)
-    turtle.goto(x, y)
-    turtle.penup()
-    
-def draw_map(edges=graf, col=None):  
-    if edges!=graf:
-        g = edges
-        edges = []
-        for v in g.vertices():
-            for n, _ in g.neighbours(v):
-                edges.append((str(g.get_vertex(v)), str(g.get_vertex(n))))
-    wn = turtle.Screen()
-    wn.setup(width=500,height=470, startx=10, starty=10)
-    wn.title("Polska")
-    
-    wn.addshape("polska.gif") 
-    
-    myImage = turtle.Turtle()
-    myImage.speed(0) 
-    myImage.shape("polska.gif")
-    myImage.penup()
-    myImage.goto(0,0) 
-    turtle.speed(0) 
-    turtle.penup()
-    
-    
-    if col == None:
-        for x,y,r in polska:
-            draw_circle(x, y, r)
-    else:
-        for k, c in col:
-            x,y,_ = slownik[k]
-            draw_circle(x, y, c)
-                        
-    for i, e in enumerate(edges):
-            draw_line(e)
-    turtle.hideturtle()
-    
-    while True:
-      wn.update()     
-      
-      
-if __name__ == "__main__":      
-    draw_map(graf)    
+    def left(self, idx):
+        return 2 * idx + 1
+
+    def right(self, idx):
+        return 2 * idx + 2
+
+    def parent(self, idx):
+        return (idx - 1) // 2
+
+    def max_heapify(self, idx):
+        left_idx = self.left(idx)
+        right_idx = self.right(idx)
+        largest = idx
+        if left_idx < self.heap_size and self.tab[left_idx] > self.tab[idx]:
+            largest = left_idx
+        if right_idx < self.heap_size and self.tab[right_idx] > self.tab[largest]:
+            largest = right_idx
+        if largest != idx:
+            self.tab[idx], self.tab[largest] = self.tab[largest], self.tab[idx]
+            self.max_heapify(largest)
+
+    def build_max_heap(self):
+        for i in range(self.heap_size // 2 - 1, -1, -1):
+            self.max_heapify(i)
+
+    def print_dict(self):
+        print('{', end=' ')
+        for i in range(self.heap_size):
+            print(f'{self.tab[i]}', end=', ')
+        print('}')
+
+    def print_tree(self, idx, lvl):
+        if idx < self.heap_size:
+            self.print_tree(self.right(idx), lvl + 1)
+            print(2 * lvl * '  ', self.tab[idx] if self.tab[idx] else None)
+            self.print_tree(self.left(idx), lvl + 1)
+
+
+import random
+import time
+
+class Priority_Queue_Element:
+    def __init__(self, data, priority):
+        self.__data = data
+        self.__priority = priority
+
+    def __repr__(self):
+        return f'{self.__priority} : {self.__data}'
+
+    def __lt__(self, other):
+        return self.__priority < other.__priority
+
+    def __gt__(self, other):
+        return self.__priority > other.__priority
+
+
+def shiftSort(lista):
+    for i in range(len(lista)):
+        swapID = i
+        for j in range(i+1, len(lista)):
+            if lista[swapID] > lista[j]:
+                swapID = j
+        lista.insert(i, lista.pop(swapID))
+    return lista
+
+def swapSort(lista):
+    for i in range(len(lista)):
+        min_idx = i
+        for j in range(i+1, len(lista)):
+            if lista[j] < lista[min_idx]:
+                min_idx = j
+        lista[i], lista[min_idx] = lista[min_idx], lista[i]
+    return lista
+
+
+def main():
+    data = [(5,'A'), (5,'B'), (7,'C'), (2,'D'), (5,'E'), (1,'F'), (7,'G'), (5,'H'), (1,'I'), (2,'J')]
+    lista1 = [Priority_Queue_Element(key, value) for key, value in data]
+
+    queue = PriorityQueue(lista1)
+
+    print("Kopiec jako tablica:")
+    queue.print_dict()
+    print("\nKopiec jako drzewo 2D:")
+    queue.print_tree(0, 0)
+
+    posortowane = []
+    while not queue.is_empty():
+        posortowane.append(queue.dequeue())
+    print("\nPosortowana tablica (kopiec):", end=" ")
+    print(*posortowane, sep=", ")
+
+    lista2 = []
+    for i in range(10000):
+        lista2.append(random.randrange(0, 99))
+
+
+    t_start = time.perf_counter()
+    lista21 = PriorityQueue(lista2)
+    while not lista21.is_empty():
+        lista21.dequeue()
+    t_stop = time.perf_counter()
+    print("Czas obliczeń (sortowanie przez kopcowanie):", "{:.7f}".format(t_stop - t_start))
+
+    data = [(5,'A'), (5,'B'), (7,'C'), (2,'D'), (5,'E'), (1,'F'), (7,'G'), (5,'H'), (1,'I'), (2,'J')]
+    print("\nSortowanie ShiftSort:", shiftSort(data))
+
+    t_start = time.perf_counter()
+    shiftSort(lista2.copy())
+    t_stop = time.perf_counter()
+    print("Czas obliczeń (sortowanie przez wybieranie - ShiftSort):", "{:.7f}".format(t_stop - t_start))
+
+    data = [(5,'A'), (5,'B'), (7,'C'), (2,'D'), (5,'E'), (1,'F'), (7,'G'), (5,'H'), (1,'I'), (2,'J')]
+    print("\nSortowanie SwapSort:", swapSort(data))
+    t_start = time.perf_counter()
+    swapSort(lista2.copy())
+    t_stop = time.perf_counter()
+    print("Czas obliczeń (sortowanie przez wybieranie - SwapSort):", "{:.7f}".format(t_stop - t_start))
+
+
+main()
+
