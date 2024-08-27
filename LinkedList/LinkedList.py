@@ -1,69 +1,100 @@
-class Queue:
+class Node:
+    def __init__(self, data=None, next_node=None):
+        self.data = data
+        self.next_node = next_node
+
+class LinkedList:
     def __init__(self):
-        self.size = 5
-        self.tab = [None] * self.size
-        self.read_index = 0
-        self.write_index = 0
+        self.head = None
+
+    def add(self, data):
+        new_node = Node(data, self.head)
+        self.head = new_node
+
+    def append(self, data):
+        new_node = Node(data)
+        if not self.head:
+            self.head = new_node
+        else:
+            current = self.head
+            while current.next_node:
+                current = current.next_node
+            current.next_node = new_node
+
+    def remove(self):
+        if self.head:
+            self.head = self.head.next_node
+
+    def remove_end(self):
+        if not self.head or not self.head.next_node:
+            self.head = None
+        else:
+            current = self.head
+            prev = None
+            while current.next_node:
+                prev = current
+                current = current.next_node
+            prev.next_node = None
 
     def is_empty(self):
-        return self.read_index == self.write_index
+        return not self.head
 
-    def peek(self):
-        if self.is_empty():
-            return None
-        return self.tab[self.read_index]
+    def length(self):
+        count = 0
+        current = self.head
+        while current:
+            count += 1
+            current = current.next_node
+        return count
 
-    def dequeue(self):
-        if self.is_empty():
-            return None
-        data = self.tab[self.read_index]
-        self.tab[self.read_index] = None
-        self.read_index = (self.read_index + 1) % self.size
-        return data
+    def get(self):
+        return self.head.data if self.head else None
 
-    def enqueue(self, data):
-        next_write_index = (self.write_index + 1) % self.size
-        if next_write_index == self.read_index:
-            new_size = self.size * 2
-            new_tab = [None] * new_size
-            for i in range(self.size - 1):  
-                new_tab[i] = self.tab[(self.read_index + i) % self.size]
-            self.read_index = 0  
-            self.write_index = self.size - 1  
-            self.size = new_size  
-            self.tab = new_tab  
-            
-        self.tab[self.write_index] = data
-        self.write_index = (self.write_index + 1) % self.size
+    def destroy(self):
+        self.head = None
 
     def __str__(self):
-        if self.is_empty():
-            return "[]"
-        items = []
-        i = self.read_index
-        while i != self.write_index:
-            items.append(self.tab[i])
-            i = (i + 1) % self.size
-        return str(items)
-
-    def print_tab(self):
-        print(self.tab)
+        result = []
+        current = self.head
+        while current:
+            result.append(str(current.data))
+            current = current.next_node
+        return "\n".join(result)
 
 
 def main():
-    
-    queue = Queue()
-    for i in range(1, 5):
-        queue.enqueue(i)
-    print(queue.dequeue())  
-    print(queue.peek())     
-    print(queue)          
-    for i in range(5, 9):
-        queue.enqueue(i)
-    queue.print_tab()      
-    while not queue.is_empty():
-        print(queue.dequeue(), end=' ')  
-    print('\n',queue)
+    universities_data = [
+        ('AGH', 'Kraków', 1919),
+        ('UJ', 'Kraków', 1364),
+        ('PW', 'Warszawa', 1915),
+        ('UW', 'Warszawa', 1915),
+        ('UP', 'Poznań', 1919),
+        ('PG', 'Gdańsk', 1945)
+    ]
+
+    uczelnie = LinkedList()
+
+    for i in range(3):
+        uczelnie.append(universities_data[i])
+    for i in range(3, 6):
+        uczelnie.add(universities_data[i])
+
+    print(uczelnie)
+    print(uczelnie.length())
+    print()
+    uczelnie.remove()
+    print(uczelnie.get())
+    print()
+    uczelnie.remove_end()
+    print(uczelnie)
+    uczelnie.destroy()
+    print(uczelnie.is_empty())
+    uczelnie.remove()
+    uczelnie.append(universities_data[0])
+    uczelnie.remove_end()
+    print(uczelnie)
+    print(uczelnie.is_empty())
+
 
 if __name__ == "__main__":
     main()
