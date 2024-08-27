@@ -1,4 +1,3 @@
-#skonczone
 import polska
 class Vertex:
     def __init__(self, key):
@@ -121,46 +120,24 @@ def remove_vertex_and_edge(graph, vertex_to_remove, edge_to_remove):
     graph.delete_vertex(vertex_to_remove)
     graph.delete_edge(*edge_to_remove)
 
-def color_graph(graph, method):
-    if method == "DFS":
-        traversal_order = graph.vertices() 
-    elif method == "BFS":
-        traversal_order = [graph.vertices()[0]] 
-
-    colors = {} 
-    max_color = 0  
-
-    for vertex in traversal_order:
-        neighbors_colors = {colors[neighbor]: True for neighbor, _ in graph.neighbours(vertex) if neighbor in colors}
-
-        color = 0
-        while color in neighbors_colors:
-            color += 1
-
-        colors[vertex] = color
-        max_color = max(max_color, color)
-
-    colored_map = [(str(vertex), colors[vertex]) for vertex in colors]
-
-    polska.draw_map(graph, colored_map)
-
-    return max_color + 1  
 
 
 def main():
+    
     adjacency_list_graph = build_graph_from_edges(GraphList, polska.graf)
+
+    malopolskie = Vertex('K')
+    mazowieckie = Vertex('W')
+    lodzkie = Vertex('E')
+
+    remove_vertex_and_edge(adjacency_list_graph, malopolskie, (mazowieckie, lodzkie))
+
+    #polska.draw_map(adjacency_list_graph)
+
     adjacency_matrix_graph = build_graph_from_edges(Graph, polska.graf)
 
-    print("DFS:")
-    max_colors_dfs_list = color_graph(adjacency_list_graph, "DFS")
-    max_colors_dfs_matrix = color_graph(adjacency_matrix_graph, "DFS")
-    print(f"Max colors (DFS) - List: {max_colors_dfs_list}, Matrix: {max_colors_dfs_matrix}")
+    remove_vertex_and_edge(adjacency_matrix_graph, malopolskie, (mazowieckie, lodzkie))
 
-    print("\nBFS:")
-    max_colors_bfs_list = color_graph(adjacency_list_graph, "BFS")
-    max_colors_bfs_matrix = color_graph(adjacency_matrix_graph, "BFS")
-    print(f"Max colors (BFS) - List: {max_colors_bfs_list}, Matrix: {max_colors_bfs_matrix}")
+    polska.draw_map(adjacency_matrix_graph)
 
-
-if __name__ == "__main__":
-    main()
+main()
